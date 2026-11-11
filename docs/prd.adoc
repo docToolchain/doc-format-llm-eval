@@ -280,9 +280,9 @@ The remaining tasks follow as thin slices.
 
 |Q-03
 |How do we validate GLFM without a GitLab instance? Local GitLab container or the GitLab Markdown API?
-|Developer
+|*Answered* (link:spikes/0001-glfm-validation.adoc[Spike 0001]): only a GitLab instance resolves includes; we use a local GitLab container plus an HTML scan for errors. GLFM likely fails the gate on R-04 and R-05.
 
 |Q-04
 |How do we detect contradictions in T-04 deterministically? Fact list per change request, or an LLM judge with rubric?
-|Developer
+|*Answered*: a fact list per change request, checked by a script against every occurrence. An LLM judge with rubric only where a fact list cannot express the check.
 |===
