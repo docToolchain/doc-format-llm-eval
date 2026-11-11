@@ -1,7 +1,7 @@
 = ADR-0001: Use Inspect AI as the evaluation harness
 
 [horizontal]
-Status:: Proposed
+Status:: Accepted
 Date:: 2026-11-11
 Answers:: PRD Q-01
 
@@ -99,5 +99,9 @@ Baseline: B (custom loop) = 0. Scores: −1 worse, 0 equal, +1 better than the b
 * We depend on Inspect AI's API stability. Mitigation: keep corpus, tasks and checks outside Inspect-specific code, so a switch to option B touches only the orchestration layer.
 * Contributors must know Python and Inspect concepts (task, solver, scorer).
 * Validators for each format (Asciidoctor, asciidoc-linter, GLFM renderer, Kroki) must run inside the sandbox image; the image becomes part of the benchmark and must be versioned.
+
+== Verification
+
+Checked against Inspect AI 0.3.289 (MIT license) on 2026-11-11: file and shell tools (`bash`, `text_editor`), an agent loop (`react`), Docker sandboxes and model providers for Anthropic, OpenAI, Google, Mistral, Bedrock, Groq and others are part of the package.
 
 *Revisit when* Inspect AI stops supporting a provider we need, or its agent loop cannot express the drift sequence (T-04) without workarounds.
