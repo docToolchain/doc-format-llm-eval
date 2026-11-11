@@ -1,0 +1,288 @@
+= PRD: doc-format-llm-eval
+:toc:
+:toclevels: 2
+:sectnums:
+
+[abstract]
+A reproducible, model-agnostic benchmark that shows which documentation format lets an LLM read and write technical documentation with the fewest errors.
+
+== Problem
+
+Teams increasingly let LLMs read, write and maintain their documentation.
+The choice of format now affects how well that works, yet nobody has measured it for technical documentation.
+
+The common advice "LLMs speak Markdown" rests on training-data volume and plain prose.
+It ignores what makes technical documentation hard: shared fragments included in several documents, diagrams as code, complex tables, validated cross-references, attributes and conditional content.
+AsciiDoc covers these natively; Markdown covers them only through incompatible dialects.
+
+Without data, the format decision is a matter of taste.
+And when a new format or a new model generation appears, there is no way to re-validate it.
+
+== Goals
+
+[cols="1,5"]
+|===
+|ID |Goal
+
+|G1
+|Decide, backed by measurements, which format to use for technical documentation that LLMs maintain.
+
+|G2
+|Make the decision re-testable: a new format, model or dialect plugs into the same benchmark.
+
+|G3
+|Measure the strengths of technical documentation, not just prose: single source, diagrams, tables, cross-references, attributes, conditionals.
+
+|G4
+|Quantify how much an automatic feedback loop (linter, build) closes the gap between formats.
+|===
+
+=== Non-goals
+
+* Judging formats for human authors without LLM involvement.
+* Ranking LLMs against each other. Models are a variable, not the subject.
+* Covering every Markdown dialect. Dialects enter only as representatives.
+
+== Personas
+
+[cols="1,3,3"]
+|===
+|Persona |Wants |Uses the benchmark to
+
+|*Docs-as-Code maintainer*
+|A format decision they can defend.
+|Read results, cite them in an ADR.
+
+|*Benchmark contributor*
+|To add a model, format or task with little effort.
+|Write an adapter, a converter or a task definition.
+
+|*Tool author* (e.g. linter, docToolchain)
+|To know which LLM mistakes their tool should catch.
+|Read the error catalogue per format.
+|===
+
+== Approach: two stages
+
+=== Stage 1: Capability gate
+
+Before measuring LLMs, check whether a format can meet the requirements at all.
+This is a checklist, no LLM involved.
+A format that misses a _Must_ requirement fails the gate.
+Missing features are a valid result, not an unfair comparison.
+
+[cols="1,4,1"]
+|===
+|ID |Requirement |MoSCoW
+
+|R-01
+|*Single source*: a fragment can be included in several documents without copying.
+|Must
+
+|R-02
+|*Diagrams as code*: several diagram languages (PlantUML incl. C4, Mermaid, GraphViz, …) render in the build.
+|Must
+
+|R-03
+|*Complex tables*: spanned cells and block content (lists, code) inside cells.
+|Must
+
+|R-04
+|*Validated cross-references*: a broken internal link is reported by the build.
+|Must
+
+|R-05
+|*Specified syntax with a validator*: one authoritative syntax and a tool that reports errors. Prerequisite for the feedback loop.
+|Must
+
+|R-06
+|*Attributes*: a value defined once, referenced everywhere.
+|Should
+
+|R-07
+|*Conditional content*: variants (e.g. product editions) from one source.
+|Should
+
+|R-08
+|*Semantic admonitions*: NOTE, WARNING, etc. as markup, not as formatting.
+|Should
+
+|R-09
+|*Platform rendering*: renders on the code-hosting platform without a separate build.
+|Could
+|===
+
+=== Stage 2: LLM evaluation
+
+Formats that pass the gate, plus the most widespread format as a baseline, run through the task catalogue.
+
+== Formats under test
+
+[cols="1,3,3"]
+|===
+|Format |Toolchain |Role
+
+|*AsciiDoc*
+|Asciidoctor, asciidoctor-kroki, docToolchain asciidoc-linter
+|Candidate
+
+|*GFM* (GitHub Flavored Markdown)
+|GFM spec, GitHub renderer
+|Baseline: most widespread, what LLMs write by default
+
+|*GLFM* (GitLab Flavored Markdown)
+|GitLab renderer (includes, Kroki)
+|Best case for Markdown without an extra tool
+|===
+
+Further formats enter by adding a converter and a validator (see <<extensibility>>).
+
+== Test corpus
+
+A small, fictitious system documented in each format, with identical content.
+
+* *Two master documents* — an architecture document (arc42) and an operations handbook.
+* *Shared modules* included by both: glossary, deployment paragraph, quality scenario.
+* *Diagrams* in several languages: C4 (PlantUML), sequence (Mermaid), dependency graph (GraphViz).
+* *Complex tables*: spanned cells, lists inside cells.
+* *Cross-references* across files.
+* *Attributes*: version number, product name.
+* *Conditionals*: two product editions.
+
+Conversions between formats are reviewed by a human so that all variants carry the same information.
+Where a format cannot express a feature (e.g. includes in GFM), the corpus uses the format's usual workaround (copies) and records it.
+
+== Task catalogue
+
+[cols="1,3,4"]
+|===
+|ID |Task |Automatic check
+
+|T-01
+|*Comprehend*: answer questions about the documentation.
+|Answers against golden answers.
+
+|T-02
+|*Generate*: write a new section from a short spec.
+|Validator and build pass; required elements present.
+
+|T-03
+|*Edit shared fragment*: change a paragraph used by both master documents.
+|All occurrences consistent; with includes: the fragment file was edited, not inlined.
+
+|T-04
+|*Drift sequence*: 10–20 change requests in a row, each in a fresh session without memory.
+|Number of contradictions across the corpus at the end.
+
+|T-05
+|*Update diagram*: an architecture change affects diagram and text.
+|Diagram renders via Kroki; elements match the text.
+
+|T-06
+|*Edit table*: add a column, edit a cell containing a list, keep spanned cells.
+|Renders; structure matches the expected table.
+
+|T-07
+|*Rename section*: all cross-references must stay valid.
+|No broken links in the build.
+
+|T-08
+|*Change attribute*: update the version number.
+|Changed in one place; output shows the new value everywhere.
+
+|T-09
+|*Add variant*: content for a second product edition.
+|Both editions build and contain the correct content.
+|===
+
+Every task also records *dialect confusion*: syntax that belongs to another format or dialect (e.g. `[text](url)` in AsciiDoc, `{{#include}}` in GLFM).
+
+== Metrics
+
+[cols="2,4"]
+|===
+|Metric |Definition
+
+|Task success
+|Share of runs where all checks pass.
+
+|Syntax errors
+|Validator and build errors, before feedback.
+
+|Iterations to green
+|Feedback rounds until validator and build pass (capped).
+
+|Consistency violations
+|Contradicting statements across documents (T-03, T-04).
+
+|Correct file
+|Share of edits made in the right source file.
+
+|Dialect confusion
+|Foreign-syntax occurrences per run.
+
+|Cost
+|Input and output tokens, wall-clock time.
+|===
+
+Each combination of task × format × model runs at least five times; results report mean and spread.
+
+Every task runs under two conditions: *without* and *with* validator feedback.
+The difference answers G4.
+
+[[extensibility]]
+== Model-agnostic and extensible design
+
+* *Tasks as data.* Corpus, change requests and golden answers live in files, not in code.
+* *Checks without an LLM.* Validators, builds, Kroki rendering and consistency checks judge the result. An LLM judge is used only where no deterministic check exists, and only with a rubric.
+* *One adapter per model.* All models get the same file-reading and file-writing tools. A new model needs a new adapter, nothing else.
+* *One converter and validator per format.* A new format needs these two, nothing else.
+* *Reproducible infrastructure.* Kroki runs locally in a container, not via the public server. Model versions are pinned in the results.
+
+First model: Claude. The harness framework (e.g. Inspect AI) is decided in an ADR.
+
+== Success criteria
+
+* The benchmark runs end to end with one command for one model.
+* Results for AsciiDoc, GFM and GLFM on all tasks, with Claude, are published in the repository.
+* Adding a second model provider takes one adapter and no change to tasks or checks.
+* The format decision is recorded as an ADR that cites the results and names its revisit triggers.
+
+== Revisit triggers
+
+Re-run the benchmark and revisit the decision when:
+
+* a new documentation format or dialect becomes relevant,
+* a new model generation is released,
+* the measured error rate of the chosen format rises above the threshold set in the ADR.
+
+== Scope and first slice
+
+*Walking skeleton:* one task (T-03, edit shared fragment), all three formats, Claude, with and without feedback, results as a table.
+It wires corpus, adapter, checks and reporting together and does nothing else.
+
+*Then:* T-04 drift sequence, because it tests single source over time — the core of Docs-as-Code.
+The remaining tasks follow as thin slices.
+
+== Open questions
+
+[cols="1,4,2"]
+|===
+|ID |Question |Ask
+
+|Q-01
+|Which harness framework (Inspect AI or a custom loop)?
+|Architect (ADR)
+
+|Q-02
+|Which threshold in the ADR triggers a revisit?
+|Product Owner
+
+|Q-03
+|How do we validate GLFM without a GitLab instance? Local GitLab container or the GitLab Markdown API?
+|Developer
+
+|Q-04
+|How do we detect contradictions in T-04 deterministically? Fact list per change request, or an LLM judge with rubric?
+|Developer
+|===
