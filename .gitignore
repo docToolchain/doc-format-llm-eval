@@ -1,0 +1,35 @@
+# Python (harness: Inspect AI)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Inspect AI run logs (results worth keeping go to results/)
+logs/
+
+# Secrets
+.env
+.env.*
+
+# docToolchain / Gradle builds
+build/
+.gradle/
+.doctoolchain/
+
+# Node (Markdown renderers, Kroki CLI)
+node_modules/
+
+# Git bundles
+*.bundle
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
