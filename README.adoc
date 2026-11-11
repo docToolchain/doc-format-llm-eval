@@ -1,0 +1,7 @@
+= doc-format-llm-eval
+
+Which documentation format works best when an LLM reads and writes technical documentation?
+
+This repository holds a reproducible, model-agnostic benchmark that compares AsciiDoc with Markdown dialects (GFM, GLFM) on the tasks that define technical documentation: single source, diagrams, complex tables, cross-references, attributes and conditionals.
+
+See link:docs/prd.adoc[Product Requirements Document].
