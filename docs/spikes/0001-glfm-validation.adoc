@@ -1,0 +1,101 @@
+= Spike 0001: How can we validate GLFM?
+
+[horizontal]
+Date:: 2026-11-11
+Answers:: PRD Q-03
+Timebox:: half a day
+Code:: discarded; only the findings below remain
+
+== Question
+
+The benchmark must check LLM output in GitLab Flavored Markdown (GLFM) automatically.
+Which renderer gives us a faithful result: a library, the GitLab Markdown API, or a local GitLab instance?
+
+== Setup
+
+One test document with:
+
+* an include with a path relative to the repository root,
+* a nested include (an included file that includes another file),
+* an include of a missing file,
+* an alert (`> [!note]`), a table, a table of contents (`[[_TOC_]]`),
+* a Mermaid and a PlantUML block,
+* a link to a missing anchor.
+
+Rendered with three candidates:
+
+. Library `gitlab-glfm-markdown` 0.0.48 (Ruby gem, Rust core, MIT).
+. GitLab Markdown API `POST /api/v4/markdown` with `gfm=true` and project context.
+. Repository file view of a local GitLab CE 19.5.4 container (`/-/blob/main/main.md?format=json&viewer=rich`).
+
+== Results
+
+[cols="3,1,1,1"]
+|===
+|Feature |Library |Markdown API |Repository view
+
+|Alert, table
+|✅
+|✅
+|✅
+
+|Table of contents
+|❌
+|–
+|✅
+
+|Include, one level
+|❌
+|❌
+|✅
+
+|Nested include
+|❌
+|❌
+|❌ footnote:[Tested with a path relative to the including file and relative to the repository root. Neither resolved.]
+
+|Missing include reported
+|❌
+|❌
+|⚠️ footnote:[Rendered as text "Error including 'shared/does-not-exist.md': not found" inside the page. No error status.]
+
+|Mermaid rendered
+|❌
+|❌
+|❌ footnote:[Only marked for client-side rendering in the browser (`js-render-mermaid`). No server-side check.]
+
+|PlantUML rendered
+|❌
+|❌
+|❌ footnote:[Requires an administrator to enable PlantUML or Kroki and run a server. Not configured in the spike.]
+
+|Broken anchor reported
+|❌
+|❌
+|❌
+|===
+
+The gitlab.com Markdown API also requires authentication (HTTP 401 without a token).
+
+== Findings
+
+. *Includes only work in the repository view.* Neither the library nor the Markdown API resolves `::include`. A faithful check needs a running GitLab instance.
+. *Includes are single-level.* A nested include stays as literal text. Single source in GLFM works, but only one level deep.
+. *Errors are not failures.* A missing include renders an error message inside the page; a broken anchor renders silently. A validator must scan the rendered HTML for these patterns.
+. *Diagrams cannot be validated through GitLab without extra setup.* Mermaid renders only in the browser; PlantUML/Kroki needs admin configuration and a diagram server.
+. *A local GitLab container is feasible.* Image size 6 GB, start-up about 5 minutes, runs with 15 GB RAM.
+
+== Consequences
+
+*For the capability gate (PRD Stage 1):*
+
+* R-01 Single source: GLFM passes only partially (one include level).
+* R-04 Validated cross-references: GLFM fails; broken anchors are not reported.
+* R-05 Specified syntax with a validator: GLFM fails; there is no validator, only a renderer that hides errors in the output.
+
+GLFM therefore likely fails the gate on two _Must_ requirements.
+That is a valid result: it is the best Markdown dialect without extra tooling, and it still lacks validation.
+
+*For Stage 2:*
+If GLFM still runs as a comparison, we validate with a local GitLab container (repository view) plus our own HTML scan for include errors and broken anchors, and Kroki for diagram blocks.
+The container belongs in the versioned benchmark infrastructure.
