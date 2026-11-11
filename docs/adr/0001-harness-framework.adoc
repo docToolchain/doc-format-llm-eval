@@ -1,0 +1,103 @@
+= ADR-0001: Use Inspect AI as the evaluation harness
+
+[horizontal]
+Status:: Proposed
+Date:: 2026-11-11
+Answers:: PRD Q-01
+
+== Context
+
+The benchmark (see link:../prd.adoc[PRD]) lets LLMs read and edit a multi-file documentation corpus, then checks the result deterministically.
+The harness must therefore:
+
+* give every model the *same file tools* in an isolated workspace per run (PRD: one adapter per model),
+* support *many model providers*, starting with Claude (PRD goal G2),
+* run *multi-step agentic tasks*, including feedback loops with a validator (G4) and drift sequences in fresh sessions (T-04),
+* score with *custom deterministic checks* (validators, builds, Kroki rendering),
+* repeat each task several times and *log* every run for later inspection.
+
+Three options are on the table:
+
+A. *Inspect AI* — open-source evaluation framework (Python) from the UK AI Security Institute. Tasks, solvers and scorers are Python; it ships an agent loop, file and shell tools, Docker sandboxes and adapters for many providers.
+
+B. *Custom loop* — our own Python code: one tool-calling loop, one adapter per provider, our own sandboxing and logging.
+
+C. *promptfoo* — open-source evaluation tool (YAML/JavaScript), strong at comparing prompts and providers on single responses.
+
+== Decision
+
+We use *Inspect AI* (option A) as the harness.
+Corpus, change requests and checks stay framework-independent files and scripts; Inspect only orchestrates runs, sandboxes and logs.
+
+== Pugh matrix
+
+Baseline: B (custom loop) = 0. Scores: −1 worse, 0 equal, +1 better than the baseline.
+
+[cols="3,1,1,1,1"]
+|===
+|Criterion |Weight |A: Inspect AI |B: Custom loop |C: promptfoo
+
+|Many providers without own adapters (G2)
+|3
+|+1
+|0
+|+1
+
+|Agentic multi-step tasks with file tools
+|3
+|+1
+|0
+|−1
+
+|Isolated workspace per run (sandbox)
+|2
+|+1
+|0
+|0
+
+|Custom deterministic scorers
+|2
+|0
+|0
+|0
+
+|Run logs, repetitions, result analysis
+|2
+|+1
+|0
+|+1
+
+|Independence from third-party framework changes
+|1
+|−1
+|0
+|−1
+
+|Low entry barrier for contributors
+|1
+|0
+|0
+|+1
+
+|*Weighted sum*
+|
+|*+9*
+|*0*
+|*+2*
+|===
+
+== Consequences
+
+*Positive*
+
+* A new model provider usually needs only a model name, not code (G2).
+* Docker sandboxes give each run a clean copy of the corpus; parallel runs cannot interfere.
+* The built-in log viewer makes every tool call of every run inspectable — useful for the error catalogue per format.
+
+*Negative*
+
+* We depend on Inspect AI's API stability. Mitigation: keep corpus, tasks and checks outside Inspect-specific code, so a switch to option B touches only the orchestration layer.
+* Contributors must know Python and Inspect concepts (task, solver, scorer).
+* Validators for each format (Asciidoctor, asciidoc-linter, GLFM renderer, Kroki) must run inside the sandbox image; the image becomes part of the benchmark and must be versioned.
+
+*Revisit when* Inspect AI stops supporting a provider we need, or its agent loop cannot express the drift sequence (T-04) without workarounds.
