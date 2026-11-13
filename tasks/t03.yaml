@@ -1,0 +1,20 @@
+id: T-03
+title: Edit shared fragment
+change_request: >-
+  The Parcel Tracker API now runs as five replicas instead of three.
+  Update the documentation accordingly.
+# Master documents whose rendered output must satisfy every fact.
+masters:
+  asciidoc: [architecture.adoc, operations.adoc]
+  gfm: [architecture.md, operations.md]
+# The single source of the changed paragraph, where the format has one.
+fragment:
+  asciidoc: shared/deployment.adoc
+# Facts are case-insensitive regular expressions over the rendered text.
+# Word boundaries keep '15 replicas' from matching '5 replicas'.
+facts:
+  must_contain:
+    - '\b(five|5) replicas\b'
+    - '\b20 database connections\b'
+  must_not_contain:
+    - '\b(three|3) replicas\b'

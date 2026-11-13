@@ -1,0 +1,2 @@
+The Parcel Tracker API runs as three replicas behind an NGINX load balancer.
+Each replica keeps a pool of 20 database connections to the primary PostgreSQL instance.

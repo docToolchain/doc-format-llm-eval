@@ -258,11 +258,15 @@ Re-run the benchmark and revisit the decision when:
 
 == Scope and first slice
 
-*Walking skeleton:* one task (T-03, edit shared fragment), all three formats, Claude, with and without feedback, results as a table.
+*Walking skeleton:* one task (T-03, edit shared fragment), AsciiDoc and GFM, Claude, with and without feedback, results as a table.
 It wires corpus, adapter, checks and reporting together and does nothing else.
+GFM and AsciiDoc validate locally and cheaply; GLFM needs a GitLab container (see link:spikes/0001-glfm-validation.adoc[Spike 0001]) and stays out of the skeleton.
 
-*Then:* T-04 drift sequence, because it tests single source over time — the core of Docs-as-Code.
-The remaining tasks follow as thin slices.
+*Then:*
+
+. GLFM as its own slice, for T-03 and T-04 only. It is the best case for Markdown includes; for the other tasks Spike 0001 already shows the result.
+. T-04 drift sequence, because it tests single source over time — the core of Docs-as-Code.
+. The remaining tasks as thin slices.
 
 == Open questions
 
