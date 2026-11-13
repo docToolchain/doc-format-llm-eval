@@ -27,24 +27,23 @@ def test_t03_facts_ignore_case():
     assert check_facts({"a.md": "Five Replicas"}, FACTS) == []
 
 
-def test_t03_single_source_holds_when_only_fragment_changed():
-    original = {
-        "architecture.adoc": "== Deployment\n\ninclude::shared/deployment.adoc[]\n",
-        "shared/deployment.adoc": "three replicas\n",
-    }
-    edited = {**original, "shared/deployment.adoc": "five replicas\n"}
-
-    assert check_single_source(original, edited, "shared/deployment.adoc") == []
+SENTINEL = "SENTINEL-0001"
 
 
-def test_t03_single_source_detects_inlined_include():
-    original = {
-        "architecture.adoc": "include::shared/deployment.adoc[]\n",
-        "shared/deployment.adoc": "three replicas\n",
-    }
-    edited = {"architecture.adoc": "five replicas\n", "shared/deployment.adoc": "three replicas\n"}
+def test_t03_single_source_holds_when_every_master_renders_the_fragment():
+    rendered = {"a.adoc": f"x {SENTINEL} y", "b.adoc": SENTINEL}
 
-    violations = check_single_source(original, edited, "shared/deployment.adoc")
+    violations = check_single_source("three", "five", "frag.adoc", rendered, SENTINEL)
 
-    assert "architecture.adoc: include of shared/deployment.adoc removed" in violations
-    assert "shared/deployment.adoc: fragment not edited" in violations
+    assert violations == []
+
+
+def test_t03_single_source_detects_master_without_fragment():
+    rendered = {"a.adoc": SENTINEL, "b.adoc": "inlined copy"}
+
+    violations = check_single_source("three", "three", "frag.adoc", rendered, SENTINEL)
+
+    assert violations == [
+        "b.adoc: does not include frag.adoc",
+        "frag.adoc: fragment not edited",
+    ]

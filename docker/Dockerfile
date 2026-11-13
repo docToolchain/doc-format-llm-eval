@@ -16,5 +16,8 @@ COPY corpus /opt/docbench/corpus
 COPY tasks /opt/docbench/tasks
 ENV PYTHONPATH=/opt/docbench/src
 
+# The LLM edits as "agent", which cannot write the grading files in /opt/docbench.
+RUN useradd --create-home agent && mkdir -p /workspace && chown agent:agent /workspace
+
 WORKDIR /workspace
 CMD ["tail", "-f", "/dev/null"]

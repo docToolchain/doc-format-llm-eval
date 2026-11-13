@@ -21,14 +21,23 @@ def check_facts(rendered: dict[str, str], facts: Facts) -> list[str]:
 
 
 def check_single_source(
-    original: dict[str, str], edited: dict[str, str], fragment: str
+    original_fragment: str | None,
+    edited_fragment: str | None,
+    fragment: str,
+    rendered_with_sentinel: dict[str, str],
+    sentinel: str,
 ) -> list[str]:
-    """The change belongs in the fragment; every include of it must survive."""
-    directive = f"include::{fragment}[]"
-    violations = []
-    for doc, text in original.items():
-        if directive in text and directive not in edited.get(doc, ""):
-            violations.append(f"{doc}: include of {fragment} removed")
-    if edited.get(fragment) == original.get(fragment):
+    """The change belongs in the fragment, and every master must still render it.
+
+    The caller writes a sentinel into the fragment and renders the masters.
+    A master that no longer shows the sentinel has dropped the include, whether
+    it was deleted, commented out or hidden behind an inactive conditional.
+    """
+    violations = [
+        f"{doc}: does not include {fragment}"
+        for doc, text in rendered_with_sentinel.items()
+        if sentinel not in text
+    ]
+    if edited_fragment == original_fragment:
         violations.append(f"{fragment}: fragment not edited")
     return violations

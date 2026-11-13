@@ -48,6 +48,29 @@ def test_t03_gfm_partial_edit_drifts(tmp_path):
     assert result["success"] is False
     assert result["single_source_violations"] is None
     assert result["fact_violations"] == [
-        "operations.md: missing '(five|5) replicas'",
-        "operations.md: forbidden '(three|3) replicas'",
+        "operations.md: missing '\\b(five|5) replicas\\b'",
+        "operations.md: forbidden '\\b(three|3) replicas\\b'",
     ]
+
+
+def test_t03_wrong_count_does_not_pass(tmp_path):
+    ws = workspace(tmp_path, "gfm")
+    for name in ("architecture.md", "operations.md"):
+        replace(ws / name, "three replicas", "15 replicas")
+
+    result = run_check("t03", "gfm", ws, CORPUS_DIR / "gfm")
+
+    assert result["success"] is False
+
+
+def test_t03_commented_out_include_is_detected(tmp_path):
+    ws = workspace(tmp_path, "asciidoc")
+    replace(ws / "shared/deployment.adoc", "three replicas", "five replicas")
+    frag = (ws / "shared/deployment.adoc").read_text()
+    replace(ws / "operations.adoc", "include::shared/deployment.adoc[]",
+            "// include::shared/deployment.adoc[]\n" + frag)
+
+    result = run_check("t03", "asciidoc", ws, CORPUS_DIR / "asciidoc")
+
+    assert result["success"] is False
+    assert "operations.adoc: does not include shared/deployment.adoc" in result["single_source_violations"]

@@ -18,6 +18,8 @@ from docbench.spec import load_task
 COMPOSE = Path(__file__).resolve().parents[2] / "docker" / "compose.yaml"
 SANDBOX_ROOT = "/opt/docbench"
 WORKSPACE = "/workspace"
+# The model edits as this unprivileged user; only the scorer runs as root.
+AGENT_USER = "agent"
 
 FORMAT_LABELS = {"asciidoc": "AsciiDoc", "gfm": "GitHub Flavored Markdown"}
 
@@ -44,7 +46,8 @@ def validate(format_name: str) -> Tool:
             The problems, one per line, or "No problems found."
         """
         result = await sandbox().exec(
-            ["python3", "-m", "docbench.validate", "--format", format_name, "--workspace", WORKSPACE]
+            ["python3", "-m", "docbench.validate", "--format", format_name, "--workspace", WORKSPACE],
+            user=AGENT_USER,
         )
         return (result.stdout + result.stderr).strip()
 
@@ -90,11 +93,14 @@ def build_prompt(task_name: str, format_name: str, feedback: bool) -> str:
 @task
 def t03(format: str = "asciidoc", feedback: bool = False) -> Task:
     """T-03: edit a paragraph shared by two master documents."""
-    tools = [text_editor()] + ([validate(format)] if feedback else [])
+    tools = [text_editor(user=AGENT_USER)] + ([validate(format)] if feedback else [])
     return Task(
         dataset=[Sample(
             input=build_prompt("t03", format, feedback),
-            setup=f"mkdir -p {WORKSPACE} && cp -r {SANDBOX_ROOT}/corpus/{format}/. {WORKSPACE}/",
+            setup=(
+                f"cp -r {SANDBOX_ROOT}/corpus/{format}/. {WORKSPACE}/"
+                f" && chown -R {AGENT_USER}:{AGENT_USER} {WORKSPACE}"
+            ),
         )],
         solver=react(tools=tools),
         scorer=workspace_check("t03", format),

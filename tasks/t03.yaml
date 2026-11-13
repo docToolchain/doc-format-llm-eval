@@ -11,9 +11,10 @@ masters:
 fragment:
   asciidoc: shared/deployment.adoc
 # Facts are case-insensitive regular expressions over the rendered text.
+# Word boundaries keep '15 replicas' from matching '5 replicas'.
 facts:
   must_contain:
-    - '(five|5) replicas'
-    - '20 database connections'
+    - '\b(five|5) replicas\b'
+    - '\b20 database connections\b'
   must_not_contain:
-    - '(three|3) replicas'
+    - '\b(three|3) replicas\b'

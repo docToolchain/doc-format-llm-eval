@@ -34,10 +34,14 @@ def scripted_model(*edits: dict):
     return get_model("mockllm/model", custom_outputs=calls)
 
 
-def run(task, model, tmp_path):
+def run_log(task, model, tmp_path):
     [log] = inspect_eval(task, model=model, log_dir=str(tmp_path), display="none")
     assert log.status == "success", log.error
-    return log.samples[0].scores["workspace_check"].value
+    return log
+
+
+def run(task, model, tmp_path):
+    return run_log(task, model, tmp_path).samples[0].scores["workspace_check"].value
 
 
 def test_t03_asciidoc_fragment_edit_scores_success(tmp_path):
@@ -61,3 +65,16 @@ def test_t03_gfm_single_copy_edit_scores_drift(tmp_path):
 
     assert score["success"] == 0
     assert score["fact_violations"] == 2
+
+
+def test_t03_agent_cannot_rewrite_grading_files(tmp_path):
+    model = scripted_model({
+        "path": "/opt/docbench/tasks/t03.yaml",
+        "old_str": "(five|5) replicas", "new_str": "(three|3) replicas",
+    })
+
+    log = run_log(t03(format="asciidoc"), model, tmp_path)
+
+    [edit] = [m for m in log.samples[0].messages if m.role == "tool" and m.function == "text_editor"]
+    assert edit.error is not None
+    assert "denied" in edit.error.message.lower()
