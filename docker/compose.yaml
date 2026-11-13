@@ -1,0 +1,8 @@
+# Uses the prebuilt sandbox image; build it first with docker/build.sh.
+services:
+  default:
+    image: docbench-sandbox:latest
+    x-local: true
+    init: true
+    network_mode: none
+    command: tail -f /dev/null

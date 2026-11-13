@@ -1,0 +1,4 @@
+markdown-it-py[linkify]==4.3.0
+linkify-it-py==2.2.0
+PyYAML==6.0.3
+asciidoc-linter @ git+https://github.com/docToolchain/asciidoc-linter@ea57b2904960cd009e41acfb1fda50c5f08bf7b2

@@ -7,7 +7,7 @@ license = {text = "MIT"}
 dependencies = [
     "inspect-ai",
     "anthropic",
-    "markdown-it-py",
+    "markdown-it-py[linkify]",
     "pyyaml",
     "asciidoc-linter @ git+https://github.com/docToolchain/asciidoc-linter",
 ]
