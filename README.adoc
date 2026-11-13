@@ -4,4 +4,43 @@ Which documentation format works best when an LLM reads and writes technical doc
 
 This repository holds a reproducible, model-agnostic benchmark that compares AsciiDoc with Markdown dialects (GFM, GLFM) on the tasks that define technical documentation: single source, diagrams, complex tables, cross-references, attributes and conditionals.
 
-See link:docs/prd.adoc[Product Requirements Document].
+* link:docs/prd.adoc[Product Requirements Document]
+* link:docs/adr/0001-harness-framework.adoc[ADR-0001: Inspect AI as evaluation harness]
+* link:docs/spikes/0001-glfm-validation.adoc[Spike 0001: GLFM validation]
+
+== Layout
+
+[horizontal]
+`corpus/`:: the fictitious system's documentation, one directory per format
+`tasks/`:: task definitions as data: change request, master documents, fact list
+`src/docbench/`:: format adapters, checks, Inspect AI tasks, runner, report
+`docker/`:: sandbox image with every format's validator
+`tests/`:: unit, integration and end-to-end tests
+
+== Run it
+
+Prerequisites: Python 3.11+, Docker, and for the unit tests Ruby with Asciidoctor.
+
+[source,bash]
+----
+python -m venv .venv && .venv/bin/pip install -e '.[dev]'
+gem install asciidoctor
+./docker/build.sh                       # sandbox image
+.venv/bin/pytest                        # incl. end-to-end run with a mock model
+----
+
+Run T-03 against a real model (2 formats × 2 feedback conditions × 5 epochs):
+
+[source,bash]
+----
+export ANTHROPIC_API_KEY=...
+.venv/bin/python -m docbench.run --model anthropic/<model> --epochs 5
+----
+
+The runner prints an AsciiDoc results table; Inspect AI logs land in `logs/` (`inspect view` opens them).
+Behind a proxy or mirror, pass extra `docker build` arguments to `docker/build.sh`, e.g. `--build-arg BASE_IMAGE=...`.
+
+== Add a format or a model
+
+* *Model:* any Inspect AI model name works with `--model`; no code change.
+* *Format:* add an adapter (renderer + validator) to `src/docbench/formats.py`, a corpus directory and the format's entries in `tasks/*.yaml`.
