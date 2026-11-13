@@ -1,0 +1,11 @@
+= Parcel Tracker: Operations Handbook
+:toc:
+
+== Runtime Setup
+
+include::shared/deployment.adoc[]
+
+== Scaling
+
+Scale the Tracker API horizontally when the p95 latency exceeds 300 ms.
+Check the database connection limit before adding replicas.

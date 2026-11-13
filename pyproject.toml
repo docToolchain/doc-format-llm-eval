@@ -1,0 +1,28 @@
+[project]
+name = "docbench"
+version = "0.1.0"
+description = "Benchmark: which documentation format lets LLMs maintain technical documentation best"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = [
+    "inspect-ai",
+    "anthropic",
+    "markdown-it-py",
+    "pyyaml",
+    "asciidoc-linter @ git+https://github.com/docToolchain/asciidoc-linter",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["e2e: end-to-end run in the Docker sandbox (needs a Docker daemon)"]
